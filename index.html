@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Identity Verification</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#f5f7fb;color:#111827;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:center;padding:20px}
+.card{width:min(520px,100%);background:white;border:1px solid #e5e7eb;border-radius:24px;padding:28px;box-shadow:0 18px 55px rgba(15,23,42,.10)}
+h1{margin:0 0 8px;font-size:28px}
+p{color:#64748b;line-height:1.55}
+.notice{background:#f8fafc;border-radius:14px;padding:14px;margin:18px 0;font-size:14px}
+video,canvas{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:18px;background:#111;display:block}
+canvas{display:none}
+button{width:100%;border:0;border-radius:14px;padding:15px;margin-top:14px;font-size:16px;font-weight:700;cursor:pointer;background:#111827;color:white}
+button.secondary{background:#e5e7eb;color:#111827}
+button:disabled{opacity:.45;cursor:not-allowed}
+.status{margin-top:15px;text-align:center;font-size:14px}
+.ok{color:#15803d}.err{color:#b91c1c}
+.small{font-size:12px;color:#94a3b8;text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+<main class="card">
+<h1>Identity Verification</h1>
+<p>Please take a selfie to complete the verification process.</p>
+
+<div class="notice">
+<strong>Camera permission required</strong><br>
+Your camera will only be accessed after you give permission. A photo is captured only when you press <b>Capture Selfie</b>.
+</div>
+
+<video id="video" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+
+<button id="start">Allow Camera</button>
+<button id="capture" disabled>Capture Selfie</button>
+<button id="retake" class="secondary" style="display:none">Retake</button>
+<button id="upload" disabled>Upload Selfie</button>
+
+<div id="status" class="status"></div>
+<div class="small">Use HTTPS for camera access. GitHub Pages provides HTTPS.</div>
+</main>
+
+<script>
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const start=document.getElementById("start");
+const capture=document.getElementById("capture");
+const retake=document.getElementById("retake");
+const upload=document.getElementById("upload");
+const status=document.getElementById("status");
+
+let stream=null;
+let blob=null;
+
+function setStatus(text, cls=""){status.textContent=text;status.className="status "+cls;}
+
+start.onclick=async()=>{
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"user",width:{ideal:1280},height:{ideal:960}},
+      audio:false
+    });
+    video.srcObject=stream;
+    start.style.display="none";
+    capture.disabled=false;
+    setStatus("Camera ready. Position your face and press Capture Selfie.");
+  }catch(e){
+    setStatus("Camera permission was not granted or the camera is unavailable.","err");
+  }
+};
+
+capture.onclick=()=>{
+  if(!stream)return;
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+  const ctx=canvas.getContext("2d");
+  ctx.save();
+  ctx.translate(canvas.width,0);
+  ctx.scale(-1,1);
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  ctx.restore();
+
+  canvas.style.display="block";
+  video.style.display="none";
+  capture.disabled=true;
+  retake.style.display="block";
+  upload.disabled=false;
+
+  canvas.toBlob(b=>{
+    blob=b;
+    setStatus("Selfie captured. Check the photo, then upload it.","ok");
+  },"image/jpeg",0.92);
+};
+
+retake.onclick=()=>{
+  blob=null;
+  canvas.style.display="none";
+  video.style.display="block";
+  capture.disabled=false;
+  retake.style.display="none";
+  upload.disabled=true;
+  setStatus("Ready for another selfie.");
+};
+
+upload.onclick=async()=>{
+  if(!blob)return;
+
+  // ============================================================
+  // BACKEND PLACEHOLDER
+  // Replace this section with your secure upload API/Supabase code.
+  // Do NOT put a service-role/private secret in this HTML file.
+  // ============================================================
+
+  setStatus("Selfie captured and ready for secure upload.","ok");
+  upload.disabled=true;
+
+  // Example FormData for your backend:
+  //
+  // const form = new FormData();
+  // form.append("selfie", blob, "selfie.jpg");
+  // const response = await fetch("YOUR_SECURE_UPLOAD_ENDPOINT", {
+  //   method:"POST",
+  //   body:form
+  // });
+};
+
+window.addEventListener("beforeunload",()=>{
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+});
+</script>
+</body>
+</html>
